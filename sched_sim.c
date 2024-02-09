@@ -9,6 +9,13 @@ typedef struct {
   int quantum;
 } SchedRRArgs;
 
+//quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
+typedef struct {
+  float decay_coeff;  //this is a
+  float prediction; //this is q(t+1)
+  int quantum;  //prova
+} SchedSJFArgs;
+
 void schedRR(FakeOS* os, void* args_){
   SchedRRArgs* args=(SchedRRArgs*)args_;
 
@@ -38,12 +45,66 @@ void schedRR(FakeOS* os, void* args_){
   }
 };
 
+FakePCB* Choose_Next(FakeOS* os, ListHead* head) {
+  //as of now it works as RR: it chooses the first PCB from the ready list
+  FakePCB* pcb=(FakePCB*) List_popFront(&os->ready);
+  //TODO:
+  //SJF must choose, from the list of PCBs in running, the PCB with the min value of prediction!
+
+  return pcb;
+}
+
+void schedSJF(FakeOS* os, void* args_) {
+  //TODO  
+  SchedSJFArgs* args=(SchedSJFArgs*)args_;    
+  //printf("Using SJF\n");
+
+  // look for the first process in ready
+  // if none, return
+  if (! os->ready.first)
+    return;
+  
+  
+  //FakePCB* pcb=(FakePCB*) List_popFront(&os->ready);  
+  FakePCB* pcb= Choose_Next(os, &os->ready);
+  os->running=pcb;
+  
+  assert(pcb->events.first);
+  ProcessEvent* e = (ProcessEvent*)pcb->events.first;
+  assert(e->type==CPU);
+
+  // look at the first event
+  // if duration>quantum
+  // push front in the list of event a CPU event of duration quantum
+  // alter the duration of the old event subtracting quantum
+  if (e->duration>args->quantum) {
+    ProcessEvent* qe=(ProcessEvent*)malloc(sizeof(ProcessEvent));
+    qe->list.prev=qe->list.next=0;
+    qe->type=CPU;
+    qe->duration=args->quantum;
+    e->duration-=args->quantum;
+    List_pushFront(&pcb->events, (ListItem*)qe);
+  }
+}
+
 int main(int argc, char** argv) {
   FakeOS_init(&os);
+
+  /* this is for RR:
   SchedRRArgs srr_args;
   srr_args.quantum=5;
   os.schedule_args=&srr_args;
   os.schedule_fn=schedRR;
+  */
+
+  SchedSJFArgs sjf_args;
+  sjf_args.decay_coeff=0.5;   
+  sjf_args.prediction=0;    
+  sjf_args.quantum=5;       //TO BE CHANGED?
+  //As of now: try SJF who chooeses next burst based on prediction, still uses quantum
+ 
+  os.schedule_args= &sjf_args;
+  os.schedule_fn=schedSJF;  //for now, it functions as RR
   
   for (int i=1; i<argc; ++i){
     FakeProcess new_process;

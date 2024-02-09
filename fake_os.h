@@ -7,6 +7,11 @@ typedef struct {
   ListItem list;
   int pid;
   ListHead events;
+
+  //want these here??
+  int q_current;
+  int q_predicted; //this is q(t)
+
 } FakePCB;
 
 struct FakeOS;
