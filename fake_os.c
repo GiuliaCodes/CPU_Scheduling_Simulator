@@ -39,6 +39,11 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   new_pcb->list.next=new_pcb->list.prev=0;
   new_pcb->pid=p->pid;
   new_pcb->events=p->events;
+  
+  //FOR SJF
+  new_pcb->q_current=0;   //initially
+  new_pcb->q_predicted=0;  
+  new_pcb->pred=0; 
 
   assert(new_pcb->events.first && "process without events");
 
@@ -108,6 +113,7 @@ void FakeOS_simStep(FakeOS* os){
         switch (e->type){
         case CPU:
           printf("\t\tmove to ready\n");
+          //pcb->q_current=0;                               //PER AZZERARE q_current??? no perchè vuoi ricordare in ready
           List_pushBack(&os->ready, (ListItem*) pcb);
           break;
         case IO:
@@ -121,17 +127,20 @@ void FakeOS_simStep(FakeOS* os){
 
   
 
+  //use  os->running->q_current , os->running->q_predicted here?
   // decrement the duration of running
   // if event over, destroy event
   // and reschedule process
   // if last event, destroy running
   FakePCB* running=os->running;
+ 
   printf("\trunning pid: %d\n", running?running->pid:-1);
   if (running) {
     ProcessEvent* e=(ProcessEvent*) running->events.first;
     assert(e->type==CPU);
     e->duration--;
-    printf("\t\tremaining time:%d\n",e->duration);
+    os->running->q_current++;                               //q_current verrà uguale alla durata che passa in cpu??
+    printf("\t\tremaining time:%d, q_current: %d, q_predicted: %f\n",e->duration, os->running->q_current, os->running->q_predicted);
     if (e->duration==0){
       printf("\t\tend burst\n");
       List_popFront(&running->events);
@@ -156,10 +165,20 @@ void FakeOS_simStep(FakeOS* os){
     }
   }
 
+/*
+  // scan ready list, 
+  aux=os->ready.first;
+  while(aux) {
+    FakePCB* pcb=(FakePCB*)aux;  
+    printf("\tready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
+    aux=aux->next; 
+  }
+*/
 
   // call schedule, if defined
   if (os->schedule_fn && ! os->running){
     (*os->schedule_fn)(os, os->schedule_args); 
+
   }
 
   // if running not defined and ready queue not empty

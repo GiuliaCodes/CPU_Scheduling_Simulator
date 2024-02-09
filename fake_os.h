@@ -9,8 +9,9 @@ typedef struct {
   ListHead events;
 
   //want these here??
+  float pred; //??
   int q_current;
-  int q_predicted; //this is q(t)
+  float q_predicted; //this is q(t)
 
 } FakePCB;
 
