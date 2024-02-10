@@ -166,7 +166,7 @@ void FakeOS_simStep(FakeOS* os){
   }
 
 /*
-  // scan ready list, 
+  // scan and print ready list, 
   aux=os->ready.first;
   while(aux) {
     FakePCB* pcb=(FakePCB*)aux;  

@@ -5,18 +5,18 @@
 
 FakeOS os;
 
-typedef struct {
+typedef struct {  //TODO: DELETE?
   int quantum;
 } SchedRRArgs;
 
 
 typedef struct {
   float decay_coeff;  //this is a
-  float prediction; //this is q(t+1)
-  int quantum;  //prova
+  //float prediction; //this is q(t+1) - useless - in FakePCB actually
+  //int quantum;                        //DELETE?? CHANGE???
 } SchedSJFArgs;
 
-void schedRR(FakeOS* os, void* args_){
+void schedRR(FakeOS* os, void* args_){  //TODO: delete?
   SchedRRArgs* args=(SchedRRArgs*)args_;
 
   // look for the first process in ready
@@ -45,64 +45,46 @@ void schedRR(FakeOS* os, void* args_){
   }
 };
 
-//quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
+
 FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
   
-  /*TODO:*/
   //SJF must choose, from the list of PCBs in running, the PCB with the min value of prediction!
+
   float min=999;
   FakePCB* sjfChoice= NULL;
 
   ListItem* aux=os->ready.first;
+
   while(aux){
     FakePCB* pcb=(FakePCB*)aux;
-    
-    //args->prediction= pcb->q_current;    //this is as if a=1; 
-    //args->prediction= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
+
+    //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
     pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
-    printf("\tready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
-    /*
+    printf("\t ready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
+    
     if (pcb->pred < min) {
       min=pcb->pred;
       //printf("Min: %f\n", min);
       sjfChoice= pcb;
     }
 
-    sjfChoice->q_current=0;
-    sjfChoice->q_predicted=pcb->pred;
-*/
     aux=aux->next;
 
   }
-  
-  aux=os->ready.first;
-  while(aux){
-    FakePCB* pcb=(FakePCB*)aux;
-    
-    if (pcb->pred < min) {
-      min=pcb->pred;
-      printf("Min: %f\n", min);
-      sjfChoice= pcb;
-    }
-
-    //sjfChoice->q_current=0;
-    //sjfChoice->q_predicted=pcb->pred;
-
-    aux=aux->next;
-
-  }
-  printf("Supposed to chose: %d\n", sjfChoice->pid);
+  printf("\tSupposed to chose: %d\n", sjfChoice->pid);
 
   //as of now it works as RR: it chooses the first PCB from the ready list
   //FakePCB* chosen=(FakePCB*) List_popFront(&os->ready);
+
   FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
   sjfChoice->q_current=0;
-  sjfChoice->q_predicted=min;   //devi capire meglio. Trial and error :()
+  sjfChoice->q_predicted=min;   //Per trial and error :-P - 
+
   return chosen;
 }
 
-void schedSJF(FakeOS* os, void* args_) {
-  //TODO  
+void schedSJF(FakeOS* os, void* args_) {      //THIS MIGHT BE NON PREEMPTIVE??
+    
   SchedSJFArgs* args=(SchedSJFArgs*)args_;    
   //printf("Using SJF\n");
 
@@ -115,23 +97,29 @@ void schedSJF(FakeOS* os, void* args_) {
   //FakePCB* pcb=(FakePCB*) List_popFront(&os->ready);  
   FakePCB* pcb= Choose_Next(os, args, &os->ready);
   os->running=pcb;
-  
+
+  //TO DO: preemption immediata se arriva remaining job più corto
+
+  //DO YOU NEED THIS?
+ /*
   assert(pcb->events.first);
   ProcessEvent* e = (ProcessEvent*)pcb->events.first;
-  assert(e->type==CPU);
-
+  assert(e->type==CPU); */
+/*
+  
   // look at the first event
   // if duration>quantum
   // push front in the list of event a CPU event of duration quantum
   // alter the duration of the old event subtracting quantum
   if (e->duration>args->quantum) {
+    printf("\n\n PREEMPTION FOR QUANTUM for pid: %d \n\n", pcb->pid);
     ProcessEvent* qe=(ProcessEvent*)malloc(sizeof(ProcessEvent));
     qe->list.prev=qe->list.next=0;
     qe->type=CPU;
     qe->duration=args->quantum;
     e->duration-=args->quantum;
     List_pushFront(&pcb->events, (ListItem*)qe);
-  }
+  } */
 }
 
 int main(int argc, char** argv) {
@@ -146,10 +134,9 @@ int main(int argc, char** argv) {
 
   SchedSJFArgs sjf_args;
   sjf_args.decay_coeff=0.5;   
-  sjf_args.prediction=0;    
-  sjf_args.quantum=10;       //TO BE CHANGED?
-  //As of now: try SJF who chooeses next burst based on prediction, still uses quantum
- 
+  //sjf_args.prediction=0;    
+  //sjf_args.quantum=5;       //TO BE CHANGED?
+   
   os.schedule_args= &sjf_args;
   os.schedule_fn=schedSJF;  //for now, it functions as RR
   
