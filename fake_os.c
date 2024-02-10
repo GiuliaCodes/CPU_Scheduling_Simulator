@@ -113,7 +113,6 @@ void FakeOS_simStep(FakeOS* os){
         switch (e->type){
         case CPU:
           printf("\t\tmove to ready\n");
-          //pcb->q_current=0;                               //PER AZZERARE q_current??? no perchè vuoi ricordare in ready
           List_pushBack(&os->ready, (ListItem*) pcb);
           break;
         case IO:
@@ -176,7 +175,8 @@ void FakeOS_simStep(FakeOS* os){
 */
 
   // call schedule, if defined
-  if (os->schedule_fn && ! os->running){
+  if (os->schedule_fn) {   //chiami anche se running non vuoto? per preemption??
+  //if (os->schedule_fn && ! os->running){
     (*os->schedule_fn)(os, os->schedule_args); 
 
   }

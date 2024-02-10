@@ -12,8 +12,8 @@ typedef struct {  //TODO: DELETE?
 
 typedef struct {
   float decay_coeff;  //this is a
-  //float prediction; //this is q(t+1) - useless - in FakePCB actually
-  //int quantum;                        //DELETE?? CHANGE???
+  float prediction; //this is q(t+1) - useless - in FakePCB actually
+ // int quantum;                        //DELETE?? CHANGE???
 } SchedSJFArgs;
 
 void schedRR(FakeOS* os, void* args_){  //TODO: delete?
@@ -47,12 +47,10 @@ void schedRR(FakeOS* os, void* args_){  //TODO: delete?
 
 
 FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
-  
   //SJF must choose, from the list of PCBs in running, the PCB with the min value of prediction!
 
   float min=999;
   FakePCB* sjfChoice= NULL;
-
   ListItem* aux=os->ready.first;
 
   while(aux){
@@ -61,7 +59,7 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
     //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
     pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
     printf("\t ready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
-    
+
     if (pcb->pred < min) {
       min=pcb->pred;
       //printf("Min: %f\n", min);
@@ -70,56 +68,63 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
 
     aux=aux->next;
 
-  }
+  }     //questo ciclo calcola per ogni PCB in ready la predizione, e sceglie il pcb con quella minore
+  
   printf("\tSupposed to chose: %d\n", sjfChoice->pid);
 
-  //as of now it works as RR: it chooses the first PCB from the ready list
-  //FakePCB* chosen=(FakePCB*) List_popFront(&os->ready);
+  //THIS IS FOR PREEMPTION???? TO BE TESTED!!!
+  //se c'è un processo in running: si deve verificare che abbia "tempo rimanente" minore, e in questo caso si deve levare il pcb in running e mettere quello scelto...
+  if ( (os->running && os->running->pred - os->running->q_current ) > sjfChoice->pred) {
+    printf("PREEMPTING: pid%d - with %f - with pid%d with - %f\n", os->running->pid, os->running->pred, sjfChoice->pid, sjfChoice->pred);
+    List_pushBack(&os->ready,(ListItem*) os->running);    //rimuovo il running e lo metto in ready (è stato preempted- quindi non va in IO)
+    //os->running=0;
+  }
 
   FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
   sjfChoice->q_current=0;
   sjfChoice->q_predicted=min;   //Per trial and error :-P - 
 
   return chosen;
+  
+  
 }
 
 void schedSJF(FakeOS* os, void* args_) {      //THIS MIGHT BE NON PREEMPTIVE??
-    
-  SchedSJFArgs* args=(SchedSJFArgs*)args_;    
+ SchedSJFArgs* args=(SchedSJFArgs*)args_;    
   //printf("Using SJF\n");
-
-  // look for the first process in ready
-  // if none, return
-  if (! os->ready.first)
-    return;
   
-  
-  //FakePCB* pcb=(FakePCB*) List_popFront(&os->ready);  
-  FakePCB* pcb= Choose_Next(os, args, &os->ready);
-  os->running=pcb;
+    // look for the first process in ready
+    // if none, return
+    if (! os->ready.first)
+      return;
+      
+    FakePCB* pcb= Choose_Next(os, args, &os->ready);
+    os->running=pcb;
 
-  //TO DO: preemption immediata se arriva remaining job più corto
+    //TO DO: preemption :(
+    
 
-  //DO YOU NEED THIS?
- /*
-  assert(pcb->events.first);
-  ProcessEvent* e = (ProcessEvent*)pcb->events.first;
-  assert(e->type==CPU); */
-/*
-  
-  // look at the first event
-  // if duration>quantum
-  // push front in the list of event a CPU event of duration quantum
-  // alter the duration of the old event subtracting quantum
-  if (e->duration>args->quantum) {
-    printf("\n\n PREEMPTION FOR QUANTUM for pid: %d \n\n", pcb->pid);
-    ProcessEvent* qe=(ProcessEvent*)malloc(sizeof(ProcessEvent));
-    qe->list.prev=qe->list.next=0;
-    qe->type=CPU;
-    qe->duration=args->quantum;
-    e->duration-=args->quantum;
-    List_pushFront(&pcb->events, (ListItem*)qe);
-  } */
+    //DO YOU NEED THIS?  
+  /*
+    assert(pcb->events.first);
+    ProcessEvent* e = (ProcessEvent*)pcb->events.first;
+    assert(e->type==CPU); 
+
+    // look at the first event
+    // if duration>quantum
+    // push front in the list of event a CPU event of duration quantum
+    // alter the duration of the old event subtracting quantum
+    if (e->duration>args->quantum) {
+      ProcessEvent* qe=(ProcessEvent*)malloc(sizeof(ProcessEvent));
+      qe->list.prev=qe->list.next=0;
+      qe->type=CPU;
+      qe->duration=args->quantum;
+      e->duration-=args->quantum;
+      List_pushFront(&pcb->events, (ListItem*)qe);
+    }  */
+
+ 
+ 
 }
 
 int main(int argc, char** argv) {
@@ -135,7 +140,7 @@ int main(int argc, char** argv) {
   SchedSJFArgs sjf_args;
   sjf_args.decay_coeff=0.5;   
   //sjf_args.prediction=0;    
-  //sjf_args.quantum=5;       //TO BE CHANGED?
+  //sjf_args.quantum=2;       //TO BE CHANGED?
    
   os.schedule_args= &sjf_args;
   os.schedule_fn=schedSJF;  //for now, it functions as RR
