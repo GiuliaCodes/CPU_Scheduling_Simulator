@@ -42,7 +42,7 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   
   //FOR SJF
   new_pcb->q_current=0;   //initially
-  new_pcb->q_predicted=0;  
+  new_pcb->q_predicted=0;  //le prime previsioni vengono molto basse così :/ 
   new_pcb->pred=0; 
 
   assert(new_pcb->events.first && "process without events");

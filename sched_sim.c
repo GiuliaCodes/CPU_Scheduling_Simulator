@@ -58,7 +58,7 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
 
     //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
     pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
-    printf("\t ready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
+    printf("\t ready pid: %d, prediction: %.04f, q_current: %d, q_predicted: %.04f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
 
     if (pcb->pred < min) {
       min=pcb->pred;
@@ -73,15 +73,17 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head) {
   printf("\tSupposed to chose: %d\n", sjfChoice->pid);
 
   //THIS IS FOR PREEMPTION???? TO BE TESTED!!!
-  //se c'è un processo in running: si deve verificare che abbia "tempo rimanente" minore, e in questo caso si deve levare il pcb in running e mettere quello scelto...
-  if ( (os->running && os->running->pred - os->running->q_current ) > sjfChoice->pred) {
-    printf("PREEMPTING: pid%d - with %f - with pid%d with - %f\n", os->running->pid, os->running->pred, sjfChoice->pid, sjfChoice->pred);
+  //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" minore, e in questo caso si deve levare il pcb in running e mettere quello scelto...
+  if ( (os->running && (os->running->pred - os->running->q_current) ) > sjfChoice->pred) {
+    printf("PREEMPTING: pid%d - with %.04f - with pid%d with - %.04f\n", os->running->pid, os->running->pred, sjfChoice->pid, sjfChoice->pred);
     List_pushBack(&os->ready,(ListItem*) os->running);    //rimuovo il running e lo metto in ready (è stato preempted- quindi non va in IO)
     //os->running=0;
   }
+  //in questo modo, nei primi cicli, ad ogni passo si fa preemption, perchè inizialmente tutto 0;
 
   FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
-  sjfChoice->q_current=0;
+
+  sjfChoice->q_current=0;   //anche quando è preempted?? Penso di si perchè q_current è il cpu burst time effettivo
   sjfChoice->q_predicted=min;   //Per trial and error :-P - 
 
   return chosen;
