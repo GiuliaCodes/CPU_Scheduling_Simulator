@@ -4,8 +4,14 @@
 
 #include "fake_os.h"
 
-void FakeOS_init(FakeOS* os) {
-  os->running=0;
+void FakeOS_init(FakeOS* os, int cpu_num) {
+
+  os->cpu_num=cpu_num;  
+
+  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);
+  for (int i=0; i< os->cpu_num; i++)
+    os->running[i]=0;         //inizializzo tutte le cpu a 0
+
   List_init(&os->ready);
   List_init(&os->waiting);
   List_init(&os->processes);
@@ -18,7 +24,9 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   assert(p->arrival_time==os->timer && "time mismatch in creation");
   // we check that in the list of PCBs there is no
   // pcb having the same pid
-  assert( (!os->running || os->running->pid!=p->pid) && "pid taken");
+  for (int i=0; i< os->cpu_num; i++) {
+    assert( (!os->running[i] || os->running[i]->pid!=p->pid) && "pid taken");
+  }
 
   ListItem* aux=os->ready.first;
   while(aux){
@@ -42,7 +50,7 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   
   //FOR SJF
   new_pcb->q_current=0;   //initially
-  new_pcb->q_predicted=0;  //le prime previsioni vengono molto basse così :/ e ci sono molte preemption!
+  new_pcb->q_predicted=0;
   new_pcb->pred=0; 
 
   assert(new_pcb->events.first && "process without events");
@@ -125,45 +133,47 @@ void FakeOS_simStep(FakeOS* os){
   }
 
   
-
-  //use  os->running->q_current , os->running->q_predicted here?
+  //bisogna ciclare su running, in maniera analoga a quanto avviene per waiting :)
+  
   // decrement the duration of running
   // if event over, destroy event
   // and reschedule process
   // if last event, destroy running
-  FakePCB* running=os->running;
- 
-  printf("\trunning pid: %d\n", running?running->pid:-1);
-  if (running) {
-    ProcessEvent* e=(ProcessEvent*) running->events.first;
-    assert(e->type==CPU);
-    e->duration--;
-    os->running->q_current++;                               //q_current verrà uguale alla durata che passa in cpu??
-    printf("\t\tremaining time:%d, q_current: %d, q_predicted: %f\n",e->duration, os->running->q_current, os->running->q_predicted);
-    if (e->duration==0){
-      printf("\t\tend burst\n");
-      List_popFront(&running->events);
-      free(e);
-      if (! running->events.first) {
-        printf("\t\tend process\n");
-        free(running); // kill process
-      } else {
-        e=(ProcessEvent*) running->events.first;
-        switch (e->type){
-        case CPU:
-          printf("\t\tmove to ready\n");
-          List_pushBack(&os->ready, (ListItem*) running);
-          break;
-        case IO:
-          printf("\t\tmove to waiting\n");
-          List_pushBack(&os->waiting, (ListItem*) running);
-          break;
+  for (int i=0; i< os->cpu_num; i++){
+
+    FakePCB* running=os->running[i];
+  
+    printf("\tonc cpu %d: running pid: %d\n", i+1, running?running->pid:-1);
+    if (running) {
+      ProcessEvent* e=(ProcessEvent*) running->events.first;
+      assert(e->type==CPU);
+      e->duration--;
+      running->q_current++;                               //q_current verrà uguale alla durata che passa in cpu
+      printf("\t\tremaining time:%d, q_current: %d, q_predicted: %f\n",e->duration, running->q_current, running->q_predicted);
+      if (e->duration==0){
+        printf("\t\tend burst\n");
+        List_popFront(&running->events);
+        free(e);
+        if (! running->events.first) {
+          printf("\t\tend process\n");
+          free(running); // kill process
+        } else {
+          e=(ProcessEvent*) running->events.first;
+          switch (e->type){
+          case CPU:
+            printf("\t\tmove to ready\n");
+            List_pushBack(&os->ready, (ListItem*) running);
+            break;
+          case IO:
+            printf("\t\tmove to waiting\n");
+            List_pushBack(&os->waiting, (ListItem*) running);
+            break;
+          }
         }
+        os->running[i] = 0;
       }
-      os->running = 0;
     }
   }
-
 /*
   // scan and print ready list, 
   aux=os->ready.first;
@@ -175,18 +185,19 @@ void FakeOS_simStep(FakeOS* os){
 */
 
   // call schedule, if defined
-  if (os->schedule_fn) {   //chiami anche se running non vuoto? per preemption??
-  //if (os->schedule_fn && ! os->running){
-    (*os->schedule_fn)(os, os->schedule_args); 
+  for (int i=0; i<os->cpu_num; i++) {
+    if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called evene while processes are running!
+    //if (os->schedule_fn && ! os->running){
+      (*os->schedule_fn)(os, os->schedule_args, i);     //passing i as the number of the cpu in use
 
-  }
-
+    }
+  
   // if running not defined and ready queue not empty
   // put the first in ready to run
-  if (! os->running && os->ready.first) {
-    os->running=(FakePCB*) List_popFront(&os->ready);
+    if (! os->running && os->ready.first) {
+      os->running[i]=(FakePCB*) List_popFront(&os->ready);
+    }
   }
-
   ++os->timer;
 
 }
