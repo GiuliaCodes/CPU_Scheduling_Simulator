@@ -15,7 +15,7 @@ typedef struct {
 } FakePCB;
 
 struct FakeOS;
-typedef void (*ScheduleFn)(struct FakeOS* os, void* args, int i);     //qui va aggiunto il numero della cpu su cui si chiama la funzione
+typedef void (*ScheduleFn)(struct FakeOS* os, void* args);     
 
 typedef struct FakeOS{
   

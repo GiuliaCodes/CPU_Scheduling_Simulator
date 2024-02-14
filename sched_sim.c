@@ -46,10 +46,11 @@ void schedRR(FakeOS* os, void* args_){  //TODO: delete?
 };
 */
 
-FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
-  //SJF must choose, from the list of PCBs in running, the PCB with the min value of prediction!
-    float min=999;
+FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {     
+  //SJF must choose, from the list of PCBs in ready, the PCB with the min value of prediction!
+    float min=999;        //is there a better initialization??
     FakePCB* sjfChoice= NULL;
+
     ListItem* aux=os->ready.first;
 
     while(aux){
@@ -75,18 +76,19 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
     //Preemption:
     //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" minore, e in questo caso si deve levare il pcb in running e mettere quello scelto
+    FakePCB* running=os->running[i];
     if ( os->running[i]) {
-      printf ("\n\tPid %d is running, checking preemption\n", os->running[i]->pid);
+      printf ("\n\tPid %d is running, checking preemption\n", running->pid);
       printf("\tRunning prediction: %f\n", os->running[i]->pred);
-      if (os->running[i]->pred - os->running[i]->q_current > sjfChoice->pred) {      //os->running->pred - os->running->q_current  sarebbe il tempo rimanente atteso (oppure solo os->running->pred?)
-        printf("\tpid%d remaining time (predicted) %.04f; pid%d pred %.04f\n", os->running[i]->pid, os->running[i]->pred- os->running[i]->q_current, sjfChoice->pid, sjfChoice->pred);
-        printf("\tPREEMPTING: pid%d with pid%d \n", os->running[i]->pid, sjfChoice->pid);
-        os->running[i]->q_predicted= os->running[i]->pred - os->running[i]->q_current;    //aggiorno la predizione del processo
-        List_pushBack(&os->ready,(ListItem*) os->running[i]);    //rimuovo il running e lo metto in ready
+      if (running->pred - running->q_current > sjfChoice->pred) {      //os->running->pred - os->running->q_current  sarebbe il tempo rimanente atteso (oppure solo os->running->pred?)
+        printf("\tpid%d remaining time (predicted) %.04f; pid%d pred %.04f\n", running->pid, running->pred- running->q_current, sjfChoice->pid, sjfChoice->pred);
+        printf("\tPREEMPTING: pid%d with pid%d \n", running->pid, sjfChoice->pid);
+        running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del processo
+        List_pushBack(&os->ready,(ListItem*) running);    //rimuovo il running e lo metto in ready
       } 
       else {
         printf("\tNo preemption needed\n"); 
-        return os->running[i];  // se no preemption needed, devi lasciare os->running!!!
+        return running;  // se no preemption needed, devi lasciare os->running!!!
       }   
     }
     
@@ -100,17 +102,19 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
 }
 
-void schedSJF(FakeOS* os, void* args_, int i) {      //puoi riunificare le due funzioni
- SchedSJFArgs* args=(SchedSJFArgs*)args_;    
-  
+void schedSJF(FakeOS* os, void* args_) {      //puoi riunificare le due funzioni
+ SchedSJFArgs* args=(SchedSJFArgs*)args_; 
+
+ for (int i=0; i<os->cpu_num; i++) {             //do you want to cicle here or in fake_os, when calling the schedule_fn??? *
     // look for the first process in ready
     // if none, return
     if (! os->ready.first)
-      return;
-      
-    FakePCB* pcb= Choose_Next(os, args, &os->ready, i);
-    os->running[i]=pcb;     //si assegna il processo alla cpu i-esima
+    return;
+
     
+    FakePCB* pcb= Choose_Next(os, args, &os->ready, i);     //i is the i-th cpu     
+    os->running[i]=pcb;     //si assegna il processo alla cpu i-esima
+  }
   
   /*
     assert(pcb->events.first);
@@ -156,7 +160,7 @@ int main(int argc, char** argv) {
   */
 
   SchedSJFArgs sjf_args;
-  sjf_args.decay_coeff=0.5;       
+  sjf_args.decay_coeff=0.5;    //vuoi prendere anche questo da tastiera?  
   //sjf_args.quantum=5;       //can be deleted??
    
   os.schedule_args= &sjf_args;
@@ -183,4 +187,6 @@ int main(int argc, char** argv) {
     FakeOS_simStep(&os);
     }
   }
+
+  free(os.running); //here?
 }

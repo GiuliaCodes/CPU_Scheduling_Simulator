@@ -8,7 +8,7 @@ void FakeOS_init(FakeOS* os, int cpu_num) {
 
   os->cpu_num=cpu_num;  
 
-  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);
+  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);         //should be freed later (valgrind)?????
   for (int i=0; i< os->cpu_num; i++)
     os->running[i]=0;         //inizializzo tutte le cpu a 0
 
@@ -185,15 +185,16 @@ void FakeOS_simStep(FakeOS* os){
 */
 
   // call schedule, if defined
-  for (int i=0; i<os->cpu_num; i++) {
+  //for (int i=0; i<os->cpu_num; i++) {           //Vuoi qui? o in sched_sim (*) ? se qui, dovresti cambiare def del fp---
     if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called evene while processes are running!
     //if (os->schedule_fn && ! os->running){
-      (*os->schedule_fn)(os, os->schedule_args, i);     //passing i as the number of the cpu in use
+      (*os->schedule_fn)(os, os->schedule_args);     //passing i as the number of the cpu in use
 
     }
   
   // if running not defined and ready queue not empty
   // put the first in ready to run
+  for (int i=0; i<os->cpu_num; i++) {
     if (! os->running && os->ready.first) {
       os->running[i]=(FakePCB*) List_popFront(&os->ready);
     }
