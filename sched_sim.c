@@ -12,7 +12,7 @@ typedef struct {  //TODO: DELETE?
 
 typedef struct {
   float decay_coeff;  //this is a
-  //int quantum;       //useless
+  //int quantum;       //useless?
 } SchedSJFArgs;
 
 /*
@@ -74,8 +74,8 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
       printf("\tMin: %f\n", min);
     }
 
-    //Preemption:
-    //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" minore, e in questo caso si deve levare il pcb in running e mettere quello scelto
+    //Preemption: quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
+    //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" maggiore, e in questo caso si deve levare il pcb in running e mettere quello scelto
     FakePCB* running=os->running[i];
     if ( os->running[i]) {
       printf ("\n\tPid %d is running, checking preemption\n", running->pid);
