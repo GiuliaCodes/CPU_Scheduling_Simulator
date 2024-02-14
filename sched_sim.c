@@ -46,59 +46,59 @@ void schedRR(FakeOS* os, void* args_){  //TODO: delete?
 };
 */
 
-FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {     
+FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {      
   //SJF must choose, from the list of PCBs in ready, the PCB with the min value of prediction!
-    float min=999;        //is there a better initialization??
-    FakePCB* sjfChoice= NULL;
+  float min=999;              //is there a better initialization??
+  FakePCB* sjfChoice= NULL;
 
-    ListItem* aux=os->ready.first;
+  ListItem* aux=os->ready.first;
 
-    while(aux){
-      FakePCB* pcb=(FakePCB*)aux;
+  while(aux){
+    FakePCB* pcb=(FakePCB*)aux;
 
-      //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t)
-      pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
-      printf("\tready pid: %d, prediction: %.04f, q_current: %d, q_predicted: %.04f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
+    //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t):
+    pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
+    printf("\tready pid: %d, prediction: %.04f, q_current: %d, q_predicted: %.04f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
 
-      if (pcb->pred < min) {
-        min=pcb->pred;
-        sjfChoice= pcb;
-      }
-
-      aux=aux->next;
-
-    }     //questo ciclo calcola per ogni PCB in ready la predizione, e sceglie il pcb con quella minore
-    
-    if (!os->running[i]) {                                    //for testing. Delete later
-      printf("\tSupposed to chose: %d\n", sjfChoice->pid);
-      printf("\tMin: %f\n", min);
+    if (pcb->pred < min) {
+      min=pcb->pred;
+      sjfChoice= pcb;
     }
 
-    //Preemption: quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
-    //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" maggiore, e in questo caso si deve levare il pcb in running e mettere quello scelto
-    FakePCB* running=os->running[i];
-    if ( os->running[i]) {
-      printf ("\n\tPid %d is running, checking preemption\n", running->pid);
-      printf("\tRunning prediction: %f\n", os->running[i]->pred);
-      if (running->pred - running->q_current > sjfChoice->pred) {      //os->running->pred - os->running->q_current  sarebbe il tempo rimanente atteso (oppure solo os->running->pred?)
-        printf("\tpid%d remaining time (predicted) %.04f; pid%d pred %.04f\n", running->pid, running->pred- running->q_current, sjfChoice->pid, sjfChoice->pred);
-        printf("\tPREEMPTING: pid%d with pid%d \n", running->pid, sjfChoice->pid);
-        running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del processo
-        List_pushBack(&os->ready,(ListItem*) running);    //rimuovo il running e lo metto in ready
-      } 
-      else {
-        printf("\tNo preemption needed\n"); 
-        return running;  // se no preemption needed, devi lasciare os->running!!!
-      }   
-    }
+    aux=aux->next;
+
+  }     //questo ciclo calcola per ogni PCB in ready la predizione, e sceglie il pcb con quella minore
+    
+  if (!os->running[i]) {                                    //for testing. Delete later
+    printf("\tSuppoosed to chose: %d\n", sjfChoice->pid);
+    //printf("\tMin: %f\n", min);
+  }
+
+  //Preemption: quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
+  //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" maggiore, e in questo caso si deve levare il pcb in running e mettere quello scelto
+  FakePCB* running=os->running[i];
+  if ( os->running[i]) {
+    printf ("\n\tPid %d is running, checking preemption\n", running->pid);
+    //printf("\tRunning prediction: %f\n", os->running[i]->pred);
+    if (running->pred - running->q_current > sjfChoice->pred) {      //os->running->pred - os->running->q_current  sarebbe il tempo rimanente atteso (oppure solo os->running->pred?)
+      printf("\tpid%d remaining time (predicted): %.04f; pid%d prediction: %.04f\n", running->pid, running->pred- running->q_current, sjfChoice->pid, sjfChoice->pred);
+      printf("\tPREEMPTING: pid%d with pid%d \n", running->pid, sjfChoice->pid);
+      running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del processo
+      List_pushBack(&os->ready,(ListItem*) running);    //rimuovo il running e lo metto in ready
+    } 
+    else {
+      printf("\tNo preemption needed\n"); 
+      return running;  // se no preemption needed, devi lasciare os->running!!!
+    }   
+  }
     
 
-    FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
+  FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
 
-    sjfChoice->q_current=0;
-    sjfChoice->q_predicted=min;  
+  sjfChoice->q_current=0;
+  sjfChoice->q_predicted=min;  
 
-    return chosen;
+  return chosen;
 
 }
 
@@ -113,7 +113,7 @@ void schedSJF(FakeOS* os, void* args_) {      //puoi riunificare le due funzioni
 
     
     FakePCB* pcb= Choose_Next(os, args, &os->ready, i);     //i is the i-th cpu     
-    os->running[i]=pcb;     //si assegna il processo alla cpu i-esima
+    os->running[i]=pcb;     //si assegna il processo scelto alla cpu i-esima
   }
   
   /*

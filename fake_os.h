@@ -21,7 +21,7 @@ typedef struct FakeOS{
   
   int cpu_num;        
 
-  FakePCB** running;    //avere più CPU significa che si possono avere più CPU in running
+  FakePCB** running;    //avere più CPU significa che si possono avere più processi in running
 
   ListHead ready;
   ListHead waiting;

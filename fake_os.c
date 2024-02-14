@@ -8,7 +8,7 @@ void FakeOS_init(FakeOS* os, int cpu_num) {
 
   os->cpu_num=cpu_num;  
 
-  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);         //should be freed later (valgrind)?????
+  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);         //should be freed later
   for (int i=0; i< os->cpu_num; i++)
     os->running[i]=0;         //inizializzo tutte le cpu a 0
 
@@ -139,11 +139,11 @@ void FakeOS_simStep(FakeOS* os){
   // if event over, destroy event
   // and reschedule process
   // if last event, destroy running
-  for (int i=0; i< os->cpu_num; i++){
+  for (int i=0; i<os->cpu_num; i++){
 
     FakePCB* running=os->running[i];
   
-    printf("\tonc cpu %d: running pid: %d\n", i+1, running?running->pid:-1);
+    printf("\ton cpu %d: running pid: %d\n", i+1, running?running->pid:-1);
     if (running) {
       ProcessEvent* e=(ProcessEvent*) running->events.first;
       assert(e->type==CPU);
@@ -186,7 +186,7 @@ void FakeOS_simStep(FakeOS* os){
 
   // call schedule, if defined
   //for (int i=0; i<os->cpu_num; i++) {           //Vuoi qui? o in sched_sim (*) ? se qui, dovresti cambiare def del fp---
-    if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called evene while processes are running!
+    if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called even while processes are running!
     //if (os->schedule_fn && ! os->running){
       (*os->schedule_fn)(os, os->schedule_args);     //passing i as the number of the cpu in use
 
