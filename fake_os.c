@@ -8,7 +8,7 @@ void FakeOS_init(FakeOS* os, int cpu_num) {
 
   os->cpu_num=cpu_num;  
 
-  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);         //should be freed later
+  os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);
   for (int i=0; i< os->cpu_num; i++)
     os->running[i]=0;         //inizializzo tutte le cpu a 0
 
@@ -24,7 +24,7 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   assert(p->arrival_time==os->timer && "time mismatch in creation");
   // we check that in the list of PCBs there is no
   // pcb having the same pid
-  for (int i=0; i< os->cpu_num; i++) {
+  for (int i=0; i < os->cpu_num; i++) {
     assert( (!os->running[i] || os->running[i]->pid!=p->pid) && "pid taken");
   }
 
@@ -133,7 +133,6 @@ void FakeOS_simStep(FakeOS* os){
   }
 
   
-  //bisogna ciclare su running, in maniera analoga a quanto avviene per waiting :)
   
   // decrement the duration of running
   // if event over, destroy event
@@ -174,23 +173,13 @@ void FakeOS_simStep(FakeOS* os){
       }
     }
   }
-/*
-  // scan and print ready list, 
-  aux=os->ready.first;
-  while(aux) {
-    FakePCB* pcb=(FakePCB*)aux;  
-    printf("\tready pid: %d, prediction: %f, q_current: %d, q_predicted: %f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
-    aux=aux->next; 
-  }
-*/
+
 
   // call schedule, if defined
-  //for (int i=0; i<os->cpu_num; i++) {           //Vuoi qui? o in sched_sim (*) ? se qui, dovresti cambiare def del fp---
-    if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called even while processes are running!
-    //if (os->schedule_fn && ! os->running){
-      (*os->schedule_fn)(os, os->schedule_args);     //passing i as the number of the cpu in use
-
-    }
+  if (os->schedule_fn) {   //since the scheduler must be preemptive, it can be called even while processes are running!
+  //if (os->schedule_fn && ! os->running){
+    (*os->schedule_fn)(os, os->schedule_args);    
+  }
   
   // if running not defined and ready queue not empty
   // put the first in ready to run
@@ -204,4 +193,31 @@ void FakeOS_simStep(FakeOS* os){
 }
 
 void FakeOS_destroy(FakeOS* os) {
+  
+
+  free(os->running);
+
+  //i seguenti non sembrano necessari, perchè le liste vengono liberate man mano durante la simulazione?
+
+  ListItem* aux=os->processes.first;
+  while(aux) {
+    FakePCB* pcb=(FakePCB*)aux;  
+    aux=aux->next; 
+    free(pcb);
+  }
+
+  aux=os->ready.first;
+  while(aux) {
+    FakePCB* pcb=(FakePCB*)aux;  
+    aux=aux->next; 
+    free(pcb);
+  }
+
+  aux=os->waiting.first;
+  while(aux) {
+    FakePCB* pcb=(FakePCB*)aux;  
+    aux=aux->next; 
+    free(pcb);
+  }
+
 }

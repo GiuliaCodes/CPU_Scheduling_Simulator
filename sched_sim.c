@@ -4,19 +4,18 @@
 #include "fake_os.h"
 
 FakeOS os;
-
-typedef struct {  //TODO: DELETE?
+/*
+typedef struct {
   int quantum;
 } SchedRRArgs;
-
+*/
 
 typedef struct {
   float decay_coeff;  //this is a
-  //int quantum;       //useless?
 } SchedSJFArgs;
 
 /*
-void schedRR(FakeOS* os, void* args_){  //TODO: delete?
+void schedRR(FakeOS* os, void* args_){
   SchedRRArgs* args=(SchedRRArgs*)args_;
 
   // look for the first process in ready
@@ -58,7 +57,7 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
     //quantum prediction: q(t+1) = a * q_current + (1-a) * q(t):
     pcb->pred= args->decay_coeff * pcb->q_current + ( 1 - args->decay_coeff ) * pcb->q_predicted;
-    printf("\tready pid: %d, prediction: %.04f, q_current: %d, q_predicted: %.04f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
+    printf("\tready pid: %d\n\t\tprediction: %.04f, q_current: %d, q_predicted: %.04f\n", pcb->pid, pcb->pred, pcb->q_current, pcb->q_predicted);
 
     if (pcb->pred < min) {
       min=pcb->pred;
@@ -67,28 +66,28 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
     aux=aux->next;
 
-  }     //questo ciclo calcola per ogni PCB in ready la predizione, e sceglie il pcb con quella minore
+  } 
     
-  if (!os->running[i]) {                                    //for testing. Delete later
+  if (!os->running[i]) {                                    //for testing
     printf("\tSuppoosed to chose: %d\n", sjfChoice->pid);
     //printf("\tMin: %f\n", min);
   }
 
-  //Preemption: quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
-  //se c'è un processo in running: si deve verificare che abbia "tempo rimanente predetto" maggiore, e in questo caso si deve levare il pcb in running e mettere quello scelto
+  //Preemption quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
+  //se c'è un processo in running, si deve verificare che abbia "tempo rimanente predetto" maggiore, e, in questo caso, si deve levare il pcb da running e metterci quello scelto
   FakePCB* running=os->running[i];
   if ( os->running[i]) {
-    printf ("\n\tPid %d is running, checking preemption\n", running->pid);
+    //printf ("\n\tPid %d is running, checking preemption\n", running->pid);
     //printf("\tRunning prediction: %f\n", os->running[i]->pred);
-    if (running->pred - running->q_current > sjfChoice->pred) {      //os->running->pred - os->running->q_current  sarebbe il tempo rimanente atteso (oppure solo os->running->pred?)
+    if (running->pred - running->q_current > sjfChoice->pred) {      //(tempo predetto - tempo trascorso in cpu) 
       printf("\tpid%d remaining time (predicted): %.04f; pid%d prediction: %.04f\n", running->pid, running->pred- running->q_current, sjfChoice->pid, sjfChoice->pred);
       printf("\tPREEMPTING: pid%d with pid%d \n", running->pid, sjfChoice->pid);
-      running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del processo
+      running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del running
       List_pushBack(&os->ready,(ListItem*) running);    //rimuovo il running e lo metto in ready
     } 
     else {
       printf("\tNo preemption needed\n"); 
-      return running;  // se no preemption needed, devi lasciare os->running!!!
+      return running;  // se non si fa preemption, bisogna lasciare il processo in running
     }   
   }
     
@@ -102,39 +101,20 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
 }
 
-void schedSJF(FakeOS* os, void* args_) {      //puoi riunificare le due funzioni
+void schedSJF(FakeOS* os, void* args_) {      //potresti riunificare le due funzioni
  SchedSJFArgs* args=(SchedSJFArgs*)args_; 
 
- for (int i=0; i<os->cpu_num; i++) {             //do you want to cicle here or in fake_os, when calling the schedule_fn??? *
+ for (int i=0; i<os->cpu_num; i++) {             //do you want to cicle here or in fake_os, when calling the schedule_fn??? 
     // look for the first process in ready
     // if none, return
     if (! os->ready.first)
     return;
-
     
     FakePCB* pcb= Choose_Next(os, args, &os->ready, i);     //i is the i-th cpu     
     os->running[i]=pcb;     //si assegna il processo scelto alla cpu i-esima
   }
   
-  /*
-    assert(pcb->events.first);
-    ProcessEvent* e = (ProcessEvent*)pcb->events.first;
-    assert(e->type==CPU); 
 
-    // look at the first event
-    // if duration>quantum
-    // push front in the list of event a CPU event of duration quantum
-    // alter the duration of the old event subtracting quantum
-    if (e->duration>args->quantum) {
-      ProcessEvent* qe=(ProcessEvent*)malloc(sizeof(ProcessEvent));
-      qe->list.prev=qe->list.next=0;
-      qe->type=CPU;
-      qe->duration=args->quantum;
-      e->duration-=args->quantum;
-      List_pushFront(&pcb->events, (ListItem*)qe);
-    }  */
-
- 
  
 }
 
@@ -160,8 +140,7 @@ int main(int argc, char** argv) {
   */
 
   SchedSJFArgs sjf_args;
-  sjf_args.decay_coeff=0.5;    //vuoi prendere anche questo da tastiera?  
-  //sjf_args.quantum=5;       //can be deleted??
+  sjf_args.decay_coeff=0.5; 
    
   os.schedule_args= &sjf_args;
   os.schedule_fn=schedSJF;
@@ -188,5 +167,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  free(os.running); //here?
+  //free(os.running);
+  FakeOS_destroy(&os);   //better like this
 }
