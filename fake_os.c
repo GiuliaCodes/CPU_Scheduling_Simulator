@@ -10,7 +10,7 @@ void FakeOS_init(FakeOS* os, int cpu_num) {
 
   os->running=(FakePCB**) malloc(sizeof(FakePCB*)*os->cpu_num);
   for (int i=0; i< os->cpu_num; i++)
-    os->running[i]=0;         //inizializzo tutte le cpu a 0
+    os->running[i]=0;
 
   List_init(&os->ready);
   List_init(&os->waiting);
@@ -48,8 +48,8 @@ void FakeOS_createProcess(FakeOS* os, FakeProcess* p) {
   new_pcb->pid=p->pid;
   new_pcb->events=p->events;
   
-  //FOR SJF
-  new_pcb->q_current=0;   //initially
+  //FOR SJF:
+  new_pcb->q_current=0;
   new_pcb->q_predicted=0;
   new_pcb->pred=0; 
 
@@ -147,7 +147,7 @@ void FakeOS_simStep(FakeOS* os){
       ProcessEvent* e=(ProcessEvent*) running->events.first;
       assert(e->type==CPU);
       e->duration--;
-      running->q_current++;                               //q_current verrà uguale alla durata che passa in cpu
+      running->q_current++;                               //q_current verrà uguale alla durata che il processo passa in cpu
       printf("\t\tremaining time:%d, q_current: %d, q_predicted: %f\n",e->duration, running->q_current, running->q_predicted);
       if (e->duration==0){
         printf("\t\tend burst\n");
@@ -184,7 +184,7 @@ void FakeOS_simStep(FakeOS* os){
   // if running not defined and ready queue not empty
   // put the first in ready to run
   for (int i=0; i<os->cpu_num; i++) {
-    if (! os->running && os->ready.first) {
+    if (! os->running[i] && os->ready.first) {
       os->running[i]=(FakePCB*) List_popFront(&os->ready);
     }
   }
@@ -194,15 +194,13 @@ void FakeOS_simStep(FakeOS* os){
 
 void FakeOS_destroy(FakeOS* os) {
   
-
   free(os->running);
-
-  //i seguenti non sembrano necessari, perchè le liste vengono liberate man mano durante la simulazione?
 
   ListItem* aux=os->processes.first;
   while(aux) {
     FakePCB* pcb=(FakePCB*)aux;  
     aux=aux->next; 
+    List_detach(&os->processes, (ListItem*)pcb);
     free(pcb);
   }
 
@@ -210,6 +208,7 @@ void FakeOS_destroy(FakeOS* os) {
   while(aux) {
     FakePCB* pcb=(FakePCB*)aux;  
     aux=aux->next; 
+    List_detach(&os->ready, (ListItem*)pcb);
     free(pcb);
   }
 
@@ -217,6 +216,7 @@ void FakeOS_destroy(FakeOS* os) {
   while(aux) {
     FakePCB* pcb=(FakePCB*)aux;  
     aux=aux->next; 
+    List_detach(&os->waiting, (ListItem*)pcb);
     free(pcb);
   }
 

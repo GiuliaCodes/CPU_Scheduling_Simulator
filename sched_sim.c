@@ -68,7 +68,7 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 
   } 
     
-  if (!os->running[i]) {                                    //for testing
+  if (!os->running[i]) {
     printf("\tSuppoosed to chose: %d\n", sjfChoice->pid);
     //printf("\tMin: %f\n", min);
   }
@@ -90,12 +90,11 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
       return running;  // se non si fa preemption, bisogna lasciare il processo in running
     }   
   }
-    
-
-  FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
 
   sjfChoice->q_current=0;
-  sjfChoice->q_predicted=min;  
+  sjfChoice->q_predicted=min;   
+
+  FakePCB* chosen= (FakePCB*) List_detach(&os->ready, (ListItem*) sjfChoice);
 
   return chosen;
 
@@ -104,13 +103,13 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
 void schedSJF(FakeOS* os, void* args_) {      //potresti riunificare le due funzioni
  SchedSJFArgs* args=(SchedSJFArgs*)args_; 
 
- for (int i=0; i<os->cpu_num; i++) {             //do you want to cicle here or in fake_os, when calling the schedule_fn??? 
+ for (int i=0; i<os->cpu_num; i++) {
     // look for the first process in ready
     // if none, return
     if (! os->ready.first)
     return;
     
-    FakePCB* pcb= Choose_Next(os, args, &os->ready, i);     //i is the i-th cpu     
+    FakePCB* pcb= Choose_Next(os, args, &os->ready, i);     
     os->running[i]=pcb;     //si assegna il processo scelto alla cpu i-esima
   }
   
@@ -167,6 +166,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  //free(os.running);
-  FakeOS_destroy(&os);   //better like this
+  FakeOS_destroy(&os);
 }
