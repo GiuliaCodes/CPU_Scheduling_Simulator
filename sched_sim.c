@@ -69,7 +69,7 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
   } 
     
   if (!os->running[i]) {
-    printf("\tSuppoosed to chose: %d\n", sjfChoice->pid);
+    printf("\tSuppoosed to chose: pid%d on cpu %d\n", sjfChoice->pid, i+1);
     //printf("\tMin: %f\n", min);
   }
 
