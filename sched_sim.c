@@ -74,20 +74,19 @@ FakePCB* Choose_Next(FakeOS* os, SchedSJFArgs* args, ListHead* head, int i) {
   }
 
   //Preemption quando arriva un processo in ready che abbia predizione minore del "tempo rimanente predetto" del processo in running
-  //se c'è un processo in running, si deve verificare che abbia "tempo rimanente predetto" maggiore, e, in questo caso, si deve levare il pcb da running e metterci quello scelto
   FakePCB* running=os->running[i];
   if ( os->running[i]) {
     //printf ("\n\tPid %d is running, checking preemption\n", running->pid);
     //printf("\tRunning prediction: %f\n", os->running[i]->pred);
     if (running->pred - running->q_current > sjfChoice->pred) {      //(tempo predetto - tempo trascorso in cpu) 
-      printf("\tpid%d remaining time (predicted): %.04f; pid%d prediction: %.04f\n", running->pid, running->pred- running->q_current, sjfChoice->pid, sjfChoice->pred);
+      printf("\tpid%d remaining time (predicted): %.04f; pid%d prediction: %.04f\n", running->pid, running->pred-running->q_current, sjfChoice->pid, sjfChoice->pred);
       printf("\tPREEMPTING: pid%d with pid%d \n", running->pid, sjfChoice->pid);
       running->q_predicted= running->pred - running->q_current;    //aggiorno la predizione del running
-      List_pushBack(&os->ready,(ListItem*) running);    //rimuovo il running e lo metto in ready
+      List_pushBack(&os->ready,(ListItem*) running);    //rimetto il pcb correntemente in running in ready - viene quindi sostituito da sjfChoice 
     } 
     else {
       printf("\tNo preemption needed\n"); 
-      return running;  // se non si fa preemption, bisogna lasciare il processo in running
+      return running;  // se non si fa preemption, bisogna lasciare il processo corrente in running
     }   
   }
 
@@ -139,7 +138,7 @@ int main(int argc, char** argv) {
   */
 
   SchedSJFArgs sjf_args;
-  sjf_args.decay_coeff=0.5; 
+  sjf_args.decay_coeff=0.5;    //can be any value 0<=a<=1 ! 
    
   os.schedule_args= &sjf_args;
   os.schedule_fn=schedSJF;
